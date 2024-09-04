@@ -1,6 +1,6 @@
 let express = require("express");
 let app = express();
-const salaController = require("./controllers/salaController");
+const salaController = require("./controllers/salaControllers");
 const usuarioController = require("./controllers/usuarioController");
 const token = require("./util/token");
 
