@@ -2,7 +2,7 @@ let express = require("express");
 let app = express();
 const salaController = require("./controllers/salaControllers");
 const usuarioController = require("./controllers/usuarioController");
-const token = require("./util/token");
+const TokenExpiredError = require("./util/token");
 
 app.use(express.urlencoded({extended : true}));
 app.use(express.json());
@@ -35,7 +35,7 @@ app.use("/salas/criar", router.post("/salas/criar", async (req, res) => {
   
   // Criar sala
 app.use("/sala/criar", router.post("/sala/criar", async (req, res) => {
-    if (!token.checkToken(req.body.token, req.body.iduser, req.body.nick)) {
+    if (!TokenExpiredError.checkToken(req.body.token, req.body.iduser, req.body.nick)) {
       return res.status(400).send({ msg: "Usuário não autorizado" });
     }
   
@@ -73,12 +73,29 @@ app.use("/salas", router.get("/salas", async (req, res, next) => {
 }));
 
 //entrar na sala
-app.use("/sala/entrar", router.post("/sala/entrar", async (req, res)=>{
-	if(!token.checkToken(req.body.token,req.body.iduser,req.body.nick)) 
-    return false;
-	let resp= await salaController.entrar(req.body.iduser, req.query.idsala);
-	res.status(200).send(resp);
-}));
+app.put("/sala/entrar", async (req, res, next) => {
+  console.log("Cabeçalhos da requisição:", req.headers);
+  console.log("Query Params:", req.query);
+
+  // Verificação do token
+  if (!TokenExpiredError.checkToken(req.headers.token, req.headers.iduser, req.headers.nick)) {
+    console.log("Token inválido ou expirado");
+    return res.status(401).send({ msg: "Token inválido ou expirado" });
+  }
+
+  // Chamada ao método entrar
+  let resp = await salaController.entrar(req.headers.iduser, req.query.idSala);
+  console.log("Resposta do método entrar:", resp);
+
+  // Verifica resposta do método entrar
+  if (resp === false) {
+    return res.status(500).send({ msg: "Erro ao entrar na sala" });
+  }
+
+  // Sucesso
+  res.status(200).send(resp);
+});
+
 
 app.use("/sala/mensagem/", router.post("/sala/mensagem", async (req, res) => {
   if(!token.checkToken(req.headers.token,req.headers.iduser,req.headers.nick)) return false;
